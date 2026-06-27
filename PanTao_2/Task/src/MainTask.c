@@ -144,7 +144,7 @@ static void Detect_Task(void)
 {
     if (EventGroupCheckBits(&Key_event, Event_AllHoleSwitchTrigger) == true)
     {
-        if (HAL_GetTick() - ValveRestartTime > 8000)
+        if (HAL_GetTick() - ValveRestartTime > 4000)
         {
             // EventGroupClearBits(&Key_event, Event_AllHoleSwitchTrigger);
             Valve.Switch.state = DEVICE_STATE_START;
