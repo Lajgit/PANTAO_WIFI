@@ -11,8 +11,8 @@
 #define OTA_MAX_PAYLOAD_SIZE   (OTA_MAX_DATA_SIZE + 6U)
 #define OTA_BOOT_VERSION       0x00010000U
 
-/* BEGIN负载前4字节，按字节发送为 42 4F 54 41，即“BOTA”。 */   
-#define OTA_TARGET_MAGIC       0x424F5441U
+/* BEGIN负载前4字节，按字节发送为 42 4F 54 41，即ASCII“BOTA”。 */   
+#define OTA_TARGET_MAGIC       0x41544F42U
 
 /* Bootloader命令 */
 #define OTA_CMD_HELLO          0x01U
