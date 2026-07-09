@@ -38,26 +38,43 @@ typedef struct
     uint32_t LastToggleTime;
 } CtrlLightGroupState_t;
 
+#define GAME_INSTRUCTION_LIGHT_POSITION 0x06U
+
 /*
  * 位置编号按控台功能区域划分：
- * 0x00：孙悟空升级按键；用户当前协议同时将游戏说明按键定义为0x00；
+ * 0x00：孙悟空升级按键；
  * 0x01：猪八戒升级按键；0x02：沙悟净升级按键；
  * 0x03：孙悟空发射按键；0x04：猪八戒发射按键；
- * 0x05：沙悟净发射按键；0x06：右上四联按键组（业务名称未指定）；
+ * 0x05：沙悟净发射按键；0x06：游戏说明四联按键；
  * 0x07：旋钮按键；0x08：数码管按键。
  */
 static const CtrlLightGroupMap_t CtrlLightGroupMap[CTRL_LIGHT_GROUP_NUM] =
 {
-    {&Light1, 18, 25}, /* 0x00：孙悟空升级 / 游戏说明（当前协议共用） */
+    {&Light1, 18, 25}, /* 0x00：孙悟空升级 */
     {&Light1, 26, 33}, /* 0x01：猪八戒升级 */
     {&Light1, 34, 41}, /* 0x02：沙悟净升级 */
     {&Light1, 42, 49}, /* 0x03：孙悟空发射 */
     {&Light1, 50, 57}, /* 0x04：猪八戒发射 */
     {&Light1, 58, 65}, /* 0x05：沙悟净发射 */
-    {&Light1, 0, 17},  /* 0x06：右上四联按键组（业务名称未指定） */
+    {&Light1, 0, 17},  /* 0x06：游戏说明四联按键 */
     {&Light2, 8, 15},  /* 0x07：旋钮按键 */
     {&Light2, 0, 7},   /* 0x08：数码管按键 */
 };
+
+static void GameInstructionLight_ForceOff(void)
+{
+    const CtrlLightGroupMap_t *map =
+        &CtrlLightGroupMap[GAME_INSTRUCTION_LIGHT_POSITION];
+
+    RGB_SetMoreColor(
+        map->Light,
+        map->Start,
+        map->End,
+        NONE,
+        0,
+        0
+    );
+}
 
 static CtrlLightGroupState_t CtrlLightGroupState[CTRL_LIGHT_GROUP_NUM];
 static uint8_t Light1RefreshPending = 0U;
@@ -123,6 +140,13 @@ bool CtrlLightGroup_Set(uint8_t position, uint8_t color, uint8_t mode)
     if (position >= CTRL_LIGHT_GROUP_NUM || color >= CTRL_LIGHT_COLOR_NUM)
         return false;
 
+    /*
+     * 游戏说明灯永久禁用。
+     * Unity发送常亮、常灭或闪烁命令时均不建立分组灯状态。
+     */
+    if (position == GAME_INSTRUCTION_LIGHT_POSITION)
+        return true;
+
     if (mode != CTRL_LIGHT_MODE_ON &&
         mode != CTRL_LIGHT_MODE_OFF &&
         mode != CTRL_LIGHT_MODE_BLINK)
@@ -138,7 +162,6 @@ bool CtrlLightGroup_Set(uint8_t position, uint8_t color, uint8_t mode)
 
     return true;
 }
-
 static void CtrlLightGroup_Task(void)
 {
     uint32_t now = HAL_GetTick();
@@ -200,8 +223,27 @@ void Light_Init(void)
     RegisterLight(BreathLight, &J1);
     RegisterLight(BreathLight, &J2);
 
-    RGB_SetMoreColor(&Light1, 0, Light1_RGBbuffer_SIZE - 1, NONE, 0, 0);
-    RGB_SetMoreColor(&Light2, 0, Light2_RGBbuffer_SIZE - 1, NONE, 0, 0);
+    RGB_SetMoreColor(
+        &Light1,
+        0,
+        Light1_RGBbuffer_SIZE - 1,
+        NONE,
+        0,
+        0
+    );
+
+    RGB_SetMoreColor(
+        &Light2,
+        0,
+        Light2_RGBbuffer_SIZE - 1,
+        NONE,
+        0,
+        0
+    );
+
+    /* 初始化阶段明确保持游戏说明灯熄灭 */
+    GameInstructionLight_ForceOff();
+
     RGB_Flush(&Light1);
     RGB_Flush(&Light2);
 }
@@ -320,6 +362,13 @@ void Light_Task(void)
 
     if (Light1RefreshPending != 0U)
     {
+        /*
+        * 最终输出保护：
+        * 无论全局场景或分组命令写入什么颜色，
+        * 游戏说明灯在发送给WS2812前都强制清零。
+        */
+        GameInstructionLight_ForceOff();
+
         RGB_Flush(&Light1);
         Light1RefreshPending = 0U;
     }
