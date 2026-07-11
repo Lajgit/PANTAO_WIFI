@@ -21,8 +21,10 @@ static uint16_t Switch_Pin[] = {Switch0_Pin, Switch1_Pin, Switch2_Pin, Switch3_P
 
 static Key_HandleTypeDef Hole[4];
 static Key_HandleTypeDef *Hole_list[4];
-static Key_HandleTypeDef Key[5];
-static Key_HandleTypeDef *Key_list[5];
+// static Key_HandleTypeDef Key[5];
+// static Key_HandleTypeDef *Key_list[5];
+static Key_HandleTypeDef Key[4];
+static Key_HandleTypeDef *Key_list[4];
 static Key_HandleTypeDef Switch[12];
 static Key_HandleTypeDef *Switch_list[12];
 uint8_t KeyState[4] = {0};
@@ -40,6 +42,21 @@ extern uint32_t ValveRestartTime;
 extern DigitalTube_t DigitalTube;
 
 Event_Handle_t Key_event;
+
+
+#define COIN_INPUT_DEBOUNCE_TIME 10U
+
+typedef enum
+{
+    COIN_INPUT_IDLE = 0,
+    COIN_INPUT_LOW_FILTER,
+    COIN_INPUT_WAIT_RELEASE,
+    COIN_INPUT_HIGH_FILTER,
+} CoinInput_State_t;
+
+static CoinInput_State_t CoinInputState = COIN_INPUT_IDLE;
+static uint32_t CoinInputTick = 0;
+
 /*
  * ----------微动初始化----------
  */
@@ -124,16 +141,26 @@ static void SettingButtonScan(void)
 
 static void Key_ShortCallback(uint16_t id)
 {
-    if (id >= 5)
+    // if (id >= 5)
+    //     return;
+    // if (id <= 2)
+    // {
+    //     Comm_SendMesg_FillData(&Tx1, Board_to_Android, SettingButton, id + 1, 0x01);
+    // }
+    // if (id == 3)
+    //     EventGroupSetBits(&Mesg_event, MesgEvent_HoolleInput);
+    // if (id == 4)
+    //     EventGroupSetBits(&Mesg_event, MesgEvent_CoinInput);
+    if (id >= 4)
         return;
+    
     if (id <= 2)
     {
-        Comm_SendMesg_FillData(&Tx1, Board_to_Android, SettingButton, id + 1, 0x01);
+        Comm_SendMesg_FillData(&Tx1, Board_to_Android,SettingButton, id + 1, 0x01);
     }
+    
     if (id == 3)
         EventGroupSetBits(&Mesg_event, MesgEvent_HoolleInput);
-    if (id == 4)
-        EventGroupSetBits(&Mesg_event, MesgEvent_CoinInput);
 }
 
 static void Key_LongCallback(uint16_t id)
@@ -151,6 +178,67 @@ static void Key_ReleaseCallback(uint16_t id)
 {
 }
 
+static void CoinInput_Scan(void)
+{
+    GPIO_PinState pin_state;
+    uint32_t current_tick;
+
+    pin_state = HAL_GPIO_ReadPin(CoinInput_GPIO_Port, CoinInput_Pin);
+    current_tick = HAL_GetTick();
+
+    switch (CoinInputState)
+    {
+    case COIN_INPUT_IDLE:
+        if (pin_state == GPIO_PIN_RESET)
+        {
+            CoinInputTick = current_tick;
+            CoinInputState = COIN_INPUT_LOW_FILTER;
+        }
+        break;
+
+    case COIN_INPUT_LOW_FILTER:
+        if (pin_state == GPIO_PIN_SET)
+        {
+            /* 低电平不足10ms，判定为毛刺 */
+            CoinInputState = COIN_INPUT_IDLE;
+        }
+        else if (current_tick - CoinInputTick >=
+                 COIN_INPUT_DEBOUNCE_TIME)
+        {
+            /* 低电平有效，等待投币脉冲释放 */
+            CoinInputState = COIN_INPUT_WAIT_RELEASE;
+        }
+        break;
+
+    case COIN_INPUT_WAIT_RELEASE:
+        if (pin_state == GPIO_PIN_SET)
+        {
+            CoinInputTick = current_tick;
+            CoinInputState = COIN_INPUT_HIGH_FILTER;
+        }
+        break;
+
+    case COIN_INPUT_HIGH_FILTER:
+        if (pin_state == GPIO_PIN_RESET)
+        {
+            /* 高电平未稳定，继续等待释放 */
+            CoinInputState = COIN_INPUT_WAIT_RELEASE;
+        }
+        else if (current_tick - CoinInputTick >=
+                 COIN_INPUT_DEBOUNCE_TIME)
+        {
+            /* 完整有效脉冲，只上报一次投币 */
+            EventGroupSetBits(&Mesg_event, MesgEvent_CoinInput);
+            CoinInputState = COIN_INPUT_IDLE;
+        }
+        break;
+
+    default:
+        CoinInputState = COIN_INPUT_IDLE;
+        break;
+    }
+}
+
 static void Button_Init(void)
 {
     for (int i = 0; i < 3; i++)
@@ -162,8 +250,8 @@ static void Button_Init(void)
     Key_Init(&Key[3], 3, HoolleInput_GPIO_Port, HoolleInput_Pin, 1, 2000, 1, Key_ShortCallback, Key_LongCallback, Key_ReleaseCallback, GPIO_PIN_RESET);
     Key_list[3] = &Key[3];
     // 投币器
-    Key_Init(&Key[4], 4, CoinInput_GPIO_Port, CoinInput_Pin, 1, 2000, 1, Key_ShortCallback, Key_LongCallback, Key_ReleaseCallback, GPIO_PIN_RESET);
-    Key_list[4] = &Key[4];
+    // Key_Init(&Key[4], 4, CoinInput_GPIO_Port, CoinInput_Pin, 1, 2000, 1, Key_ShortCallback, Key_LongCallback, Key_ReleaseCallback, GPIO_PIN_RESET);
+    // Key_list[4] = &Key[4];
 }
 
 void KeyAll_Init(void)
@@ -179,7 +267,9 @@ void Key_Task(void)
     // SettingButtonScan();
     if (HAL_GetTick() > 10000)
         Key_Scan(Hole_list, 4);
-    Key_Scan(Key_list, 5);
+    // Key_Scan(Key_list, 5);
+    Key_Scan(Key_list, 4);
+    CoinInput_Scan();
     Key_Scan(Switch_list, 12);
     if (EventGroupCheckBits(&Key_event, Event_AllHoleSwitchTrigger) == false)
     {
