@@ -33,7 +33,7 @@ static uint8_t DigitalBufferOutside[4] = {0x82};
 DigitalTube_t DigitalTube;
 DigitalTube_t DigitalTubeOutside;
 
-Scene_t Scene = SCENE_LESSLIGHT;
+Scene_t Scene = SCENE_PLAYING;
 Event_Handle_t Event;
 uint32_t ValveRestartTime = 0;
 
@@ -50,7 +50,6 @@ static void System_Task(void)
 static void DigitalTubeTask_Init(void)
 {
     DigitalTube_Init_t Init;
-    
     /* 装载有效数据前禁止数码管输出 */
     HAL_GPIO_WritePin(
         SPI2_OE_GPIO_Port,
@@ -111,6 +110,7 @@ static void DigitalTubeTask_Init(void)
 //         time = HAL_GetTick();
 //     }
 // }
+
 static void DigitalTube_Task(void)
 {
     static uint32_t time = 0;

@@ -41,6 +41,10 @@ void Communicate_Tx_Init(Tx_HandleTypeDef *Handle, Tx_InitTypeDef Tx_Init)
 void Rx_Receive(void *self, void *mesg, uint8_t mesg_len)
 {
     Rx_HandleTypeDef *rx = (Rx_HandleTypeDef *)self;
+
+    if (rx == NULL || mesg == NULL || mesg_len == 0 || mesg_len > rx->Queue.Buf_Size)
+        return;
+
     while (rx->Handle.RingBuf.f_IsEmpty(&rx->Handle.RingBuf) == false)
     {
         /// 从环形缓冲区中读取一个字节，并根据当前状态进行处理
@@ -58,18 +62,28 @@ void Rx_Receive(void *self, void *mesg, uint8_t mesg_len)
                     rx->Queue.Index++;
                 }
                 break;
-            /// 接收数据阶段，直到接收到帧尾或队列满
+            /// 接收固定长度数据帧
             case RECEIVE_DATA:
-                // 若队列未满，继续存储数据；否则放弃当前帧并重同步
-                if (rx->Queue.Index < rx->Queue.Buf_Size)
-                    rx->Queue.Buf[rx->Queue.Index] = rx->CurrData;
-                else
-                    rx->State = WAIT_HEAD;
-                // 若接收到帧尾且帧长度符合条件，进行解包和处理，并重置状态以接收下一帧
-                if (rx->CurrData == rx->Frame_Tail && rx->Queue.Index >= mesg_len - 1)
+                // 索引超过固定帧长或接收队列容量时，立即丢弃当前帧
+                if (rx->Queue.Index >= mesg_len || rx->Queue.Index >= rx->Queue.Buf_Size)
                 {
                     rx->State = WAIT_HEAD;
-                    memcpy(mesg, rx->Queue.Buf, rx->Queue.Index + 1);
+                    rx->Queue.Index = 0;
+                    break;
+                }
+
+                rx->Queue.Buf[rx->Queue.Index] = rx->CurrData;
+
+                // 只允许固定帧长的最后一个字节作为帧尾
+                if (rx->Queue.Index == mesg_len - 1U)
+                {
+                    rx->State = WAIT_HEAD;
+                    rx->Queue.Index = 0;
+
+                    if (rx->CurrData != rx->Frame_Tail)
+                        break;
+
+                    memcpy(mesg, rx->Queue.Buf, mesg_len);
                     /// 解包并处理
                     if (rx->Verify != NULL)
                     {
@@ -82,7 +96,9 @@ void Rx_Receive(void *self, void *mesg, uint8_t mesg_len)
                         if (rx->Deal != NULL)
                             rx->Deal(mesg);
                     }
+                    break;
                 }
+
                 rx->Queue.Index++;
                 break;
             }

@@ -17,6 +17,7 @@ extern Setting_TypeDef Setting;
 extern uint8_t sm16306s_data[2];
 extern Scene_t Scene;
 extern Tx_HandleTypeDef Tx3;
+
 #define HOLE_BOOT_TEST_LIGHTNESS 5
 
 void Light_Init(void)
@@ -41,7 +42,7 @@ void Light_Init(void)
     LightDerive_Init(&Hole3, &Light, 16, 23, (uint8_t *)&Setting.Board_Lightness);
     LightDerive_Init(&Hole4, &Light, 24, 31, (uint8_t *)&Setting.Board_Lightness);
 
-    // /* 开机时四个孔洞灯亮天蓝色 */
+    //  /* 开机时四个孔洞灯亮天蓝色 */
     // Light.Init = true;
 
     // LightEffect_Unblock_SetColor(
@@ -134,13 +135,10 @@ static void DefeatSceneLight(void)
 }
 void Light_Task(void)
 {
-    if (Scene == SCENE_LESSLIGHT)
+    if (Scene == SCENE_SETTING)
         SettingSceneLight();
     // else if (Scene == SCENE_IDLE)
-    //     // IdleSceneLight();
-    //     PlayingSceneLight();
+    //     IdleSceneLight();
     else if (Scene == SCENE_PLAYING)
         PlayingSceneLight();
-    // else if (Scene == SCENE_VICTORY)
-    //     PlayingSceneLight();
 }

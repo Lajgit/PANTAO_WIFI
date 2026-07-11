@@ -199,19 +199,20 @@ static void USART1_Deal(void *Rx_mesg)
                 BreathLight_RefreshState(BreathList, 4);
                 Comm_SendMesg_FillData(&Tx3, Board_to_Ctrl, 0x02, mesg->Data4, 0x00); // 发送给控台板
                 break;
-                /// 场景切换
-            case SceneChange:
-                Comm_SendMesg_FillData(&Tx3,Board_to_Ctrl, 0x03,mesg->Data4,0x00);
-                break;
             /// 控台亮度
             case CtrlLightness:
                 Comm_SendMesg_FillData(&Tx3, Board_to_Ctrl, 0x04, mesg->Data4, 0x00); // 控台亮度
                 break;
-            /// 控台灯光分组
+                /// 控台灯光分组
             case CtrlTubeLight:
                 data = ((uint32_t)mesg->Data3 << 8) | mesg->Data4;
                 Comm_SendMesg_FillData(&Tx3, Board_to_Ctrl, 0x05, data, mesg->ExpandCode);
 
+                break;
+            /// 场景切换
+            case SceneChange:
+                Comm_SendMesg_FillData(&Tx3,Board_to_Ctrl,0x03, mesg->Data4,0x00);
+                Scene = mesg->Data4;
                 break;
             /// 清珠
             case OutputAllHoolle:
@@ -296,7 +297,8 @@ static void USART1_Deal(void *Rx_mesg)
 
             /// 停止所有设备
             case StopAllDevice:
-                Device_StopAllImmediately();
+                Motor_Hoolle1.Motor.state = DEVICE_STATE_STOP;
+                Card.Switch.state = DEVICE_STATE_STOP;
                 EventGroupSetBits(&Mesg_event, MesgEvent_RemainingHoolle);
                 break;
             }
