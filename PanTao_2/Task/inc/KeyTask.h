@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-#define KEY_DEBOUNCE_TIME 15         // 按键消抖时间
+#define KEY_DEBOUNCE_TIME 7         // 按键消抖时间
 #define KEY_LONG_PRESS_TIME 800      // 长按判定时间
 #define KEY_LONG_TRIGGER_FREQUENCY 3 // 长按触发频率
 

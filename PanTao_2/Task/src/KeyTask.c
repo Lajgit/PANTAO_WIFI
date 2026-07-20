@@ -120,7 +120,7 @@ static void Hole_Init(void)
 {
     for (int i = 0; i < 4; i++)
     {
-        Key_Init(&Hole[i], i, Hole_GPIOPort[i], Hole_Pin[i], 15, HOLE_LONG_PRESS_TIME, HOLE_LONG_TRIGGER_FREQUENCY, Hole_ShortCallback, Hole_LongCallback, Hole_ReleaseCallback, GPIO_PIN_SET);
+        Key_Init(&Hole[i], i, Hole_GPIOPort[i], Hole_Pin[i], KEY_DEBOUNCE_TIME, HOLE_LONG_PRESS_TIME, HOLE_LONG_TRIGGER_FREQUENCY, Hole_ShortCallback, Hole_LongCallback, Hole_ReleaseCallback, GPIO_PIN_SET);
         Hole_list[i] = &Hole[i];
     }
 }

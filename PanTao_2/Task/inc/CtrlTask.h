@@ -10,7 +10,7 @@
 #define HoolleMotorRetry_Times 3
 #define ValveTimeout_time 800
 
-#define HoolleMotor_Speed 100
+#define HoolleMotor_Speed 85
 #define HoolleMotor_Dir 1
 
 typedef struct
