@@ -75,9 +75,10 @@ void Light_Init(void)
     // HAL_Delay(10);
 }
 
+/* 灯光效果接口的end参数为包含式索引，32颗灯的合法末尾索引为31 */
 static void SettingSceneLight(void)
 {
-    LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE, WHITE, Setting.Board_Lightness, 255, false);
+    LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE - 1U, WHITE, Setting.Board_Lightness, 255, false);
     for (uint8_t i = 0; i < 6; i++)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
 }
@@ -87,13 +88,13 @@ static void IdleSceneLight(void)
     static uint8_t LightBoard_dir = 0;
     if (LightBoard_dir == 0)
     {
-        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE, NONE, WHITE, Setting.Board_Lightness, 255, 50, 6000, 0);
+        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE - 1U, NONE, WHITE, Setting.Board_Lightness, 255, 50, 6000, 0);
         if (Light.Finish == true)
             LightBoard_dir = 1;
     }
     if (LightBoard_dir == 1)
     {
-        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE, WHITE, NONE, Setting.Board_Lightness, 255, 50, 0, 0);
+        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE - 1U, WHITE, NONE, Setting.Board_Lightness, 255, 50, 0, 0);
         if (Light.Finish == true)
             LightBoard_dir = 0;
     }
@@ -107,7 +108,7 @@ static void HoolleInputSceneLight(void)
 
 static void PublicRatioLight(void)
 {
-    LightEffect_Unblock_SetRand(&Light, 0, Light_RGBbuffer_SIZE, Setting.Board_Lightness, 255, 30);
+    LightEffect_Unblock_SetRand(&Light, 0, Light_RGBbuffer_SIZE - 1U, Setting.Board_Lightness, 255, 30);
     for (uint8_t i = 0; i < 6; i++)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
 }
@@ -116,20 +117,20 @@ static void PlayingSceneLight(void)
 {
     for (uint8_t i = 0; i < 6; i++)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
-    LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE, NONE, Setting.Board_Lightness, 0, false);
+    LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE - 1U, NONE, Setting.Board_Lightness, 0, false);
 }
 static void VictorySceneLight(void)
 {
 
     for (uint8_t i = 0; i < 6; i++)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
-    LightEffect_Unblock_Blink(&Light, 0, Light_RGBbuffer_SIZE, YELLOW, Setting.Board_Lightness, 255, 100);
+    LightEffect_Unblock_Blink(&Light, 0, Light_RGBbuffer_SIZE - 1U, YELLOW, Setting.Board_Lightness, 255, 100);
 }
 
 static void DefeatSceneLight(void)
 {
 
-    LightEffect_Unblock_Breath(&Light, 0, Light_RGBbuffer_SIZE, RED, Setting.Board_Lightness, 15, 2, Breath_LinearlyDiminish, false);
+    LightEffect_Unblock_Breath(&Light, 0, Light_RGBbuffer_SIZE - 1U, RED, Setting.Board_Lightness, 15, 2, Breath_LinearlyDiminish, false);
     for (uint8_t i = 0; i < 6; i++)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
 }
