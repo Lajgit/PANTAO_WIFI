@@ -75,7 +75,7 @@ void Light_Init(void)
     // HAL_Delay(10);
 }
 
-/* 灯光效果接口的end参数为包含式索引，32颗灯的合法末尾索引为31 */
+/* 使用包含式end索引的灯光接口时，32颗灯的合法末尾索引为31 */
 static void SettingSceneLight(void)
 {
     LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE - 1U, WHITE, Setting.Board_Lightness, 255, false);
@@ -88,13 +88,13 @@ static void IdleSceneLight(void)
     static uint8_t LightBoard_dir = 0;
     if (LightBoard_dir == 0)
     {
-        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE - 1U, NONE, WHITE, Setting.Board_Lightness, 255, 50, 6000, 0);
+        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE, NONE, WHITE, Setting.Board_Lightness, 255, 50, 6000, 0);
         if (Light.Finish == true)
             LightBoard_dir = 1;
     }
     if (LightBoard_dir == 1)
     {
-        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE - 1U, WHITE, NONE, Setting.Board_Lightness, 255, 50, 0, 0);
+        LightEffect_Unblock_Flow(&Light, 0, Light_RGBbuffer_SIZE, WHITE, NONE, Setting.Board_Lightness, 255, 50, 0, 0);
         if (Light.Finish == true)
             LightBoard_dir = 0;
     }
