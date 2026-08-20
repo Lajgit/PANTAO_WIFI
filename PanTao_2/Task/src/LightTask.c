@@ -17,6 +17,7 @@ extern Setting_TypeDef Setting;
 extern uint8_t sm16306s_data[2];
 extern Scene_t Scene;
 extern Tx_HandleTypeDef Tx3;
+extern uint8_t KeyState[4];
 
 #define HOLE_BOOT_TEST_LIGHTNESS 5
 
@@ -119,6 +120,40 @@ static void PlayingSceneLight(void)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
     LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE - 1U, NONE, Setting.Board_Lightness, 0, false);
 }
+
+/* 切回游玩场景时，根据光眼已触发状态一次性恢复四组孔洞灯 */
+static bool RestorePlayingHoleLight(void)
+{
+    if (SemaphoreTake(Light.Semaphore) == false)
+        return false;
+
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        if (KeyState[i] != 0)
+        {
+            RGB_SetMoreColor(&Light,
+                             HoleLightList[i]->start,
+                             HoleLightList[i]->end,
+                             GREEN,
+                             Setting.Board_Lightness,
+                             255);
+        }
+        else
+        {
+            RGB_SetMoreColor(&Light,
+                             HoleLightList[i]->start,
+                             HoleLightList[i]->end,
+                             NONE,
+                             0,
+                             0);
+        }
+    }
+
+    RGB_Flush(&Light);
+    Light.Init = false;
+    return true;
+}
+
 static void VictorySceneLight(void)
 {
 
@@ -136,10 +171,30 @@ static void DefeatSceneLight(void)
 }
 void Light_Task(void)
 {
+    static Scene_t LastScene = SCENE_PLAYING;
+    static bool RestoreHoleLightPending = false;
+
+    if (Scene == SCENE_PLAYING && LastScene != SCENE_PLAYING)
+        RestoreHoleLightPending = true;
+    else if (Scene != SCENE_PLAYING)
+        RestoreHoleLightPending = false;
+
     if (Scene == SCENE_SETTING)
         SettingSceneLight();
     // else if (Scene == SCENE_IDLE)
     //     IdleSceneLight();
     else if (Scene == SCENE_PLAYING)
-        PlayingSceneLight();
+    {
+        if (RestoreHoleLightPending == true)
+        {
+            if (RestorePlayingHoleLight() == true)
+                RestoreHoleLightPending = false;
+        }
+        else
+        {
+            PlayingSceneLight();
+        }
+    }
+
+    LastScene = Scene;
 }
