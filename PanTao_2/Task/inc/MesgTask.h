@@ -8,11 +8,12 @@
 #define Android_USART USART1
 
 //#define VERSION 0x01000100U // V1.0.1
+//V1.0.4.0 修改为光眼每次触发都上报安卓
 
 /* ========== 版本号分段定义，升级版本仅需修改此处数值 ========== */
 #define VERSION_MAJOR    1U    // 主版本号：重大架构迭代时递增
 #define VERSION_MINOR    0U    // 次版本号：功能新增时递增
-#define VERSION_PATCH    3U    // 修订版本号：Bug修复时递增
+#define VERSION_PATCH    4U    // 修订版本号：Bug修复时递增
 #define VERSION_BUILD    0U    // 构建版本号：编译序号/保留位，按需使用
 
 /* ========== 自动组合为32位无符号版本号（格式：0xMM NN PP BB） ==========
