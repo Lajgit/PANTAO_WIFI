@@ -97,10 +97,11 @@ static void Hole_ShortCallback(uint16_t id)
     {
         KeyState[id] = 1;
         EventGroupClearBits(&Key_event, Event_AllHoleSwitchTrigger);
-        // if (Scene == SCENE_PLAYING)
-        {
-            Comm_SendMesg_FillData_withResend(&Tx1, Board_to_Android, LightEye, (uint32_t)id + 1, 0x00, &ResendList);
-        }
+    }
+    // 每次有效触发都上报安卓，重复过滤交由安卓处理
+    // if (Scene == SCENE_PLAYING)
+    {
+        Comm_SendMesg_FillData_withResend(&Tx1, Board_to_Android, LightEye, (uint32_t)id + 1, 0x00, &ResendList);
     }
 }
 
