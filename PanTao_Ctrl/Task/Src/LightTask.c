@@ -40,24 +40,81 @@ typedef struct
 
 /*
  * 位置编号按控台功能区域划分：
- * 0x00：孙悟空升级按键；用户当前协议同时将游戏说明按键定义为0x00；
- * 0x01：猪八戒升级按键；0x02：沙悟净升级按键；
- * 0x03：孙悟空发射按键；0x04：猪八戒发射按键；
- * 0x05：沙悟净发射按键；0x06：右上四联按键组（业务名称未指定）；
- * 0x07：旋钮按键；0x08：数码管按键。
+ * 0x00：孙悟空升级按键；
+ * 0x01：猪八戒升级按键；
+ * 0x02：沙悟净升级按键；
+ * 0x03：孙悟空发射按键；
+ * 0x04：猪八戒发射按键；
+ * 0x05：沙悟净发射按键；
+ * 0x06：游戏说明按键组；
+ * 0x07：数码管按键；
+ * 0x08：旋钮按键。
  */
 static const CtrlLightGroupMap_t CtrlLightGroupMap[CTRL_LIGHT_GROUP_NUM] =
 {
-    {&Light1, 18, 25}, /* 0x00：孙悟空升级 / 游戏说明（当前协议共用） */
+    {&Light1, 18, 25}, /* 0x00：孙悟空升级 */
     {&Light1, 26, 33}, /* 0x01：猪八戒升级 */
     {&Light1, 34, 41}, /* 0x02：沙悟净升级 */
     {&Light1, 42, 49}, /* 0x03：孙悟空发射 */
     {&Light1, 50, 57}, /* 0x04：猪八戒发射 */
     {&Light1, 58, 65}, /* 0x05：沙悟净发射 */
-    {&Light1, 0, 17},  /* 0x06：右上四联按键组（业务名称未指定） */
-    {&Light2, 8, 15},  /* 0x07：旋钮按键 */
-    {&Light2, 0, 7},   /* 0x08：数码管按键 */
+    {&Light1, 0, 17},  /* 0x06：游戏说明 */
+    {&Light2, 8, 15},  /* 0x07：数码管按键 */
+    {&Light2, 0, 7},   /* 0x08：旋钮按键 */
 };
+
+/*
+ * 永久熄灭的控台灯组：
+ *
+ * 0x00：孙悟空升级
+ * 0x01：猪八戒升级
+ * 0x02：沙悟净升级
+ * 0x06：游戏说明
+ * 0x07：数码管按键
+ */
+static bool CtrlLightGroup_IsForceOff(uint8_t position)
+{
+    return position <= 0x02U ||
+           position == 0x06U ||
+           position == 0x07U;
+}
+
+/*
+ * 将指定灯带中需要永久熄灭的分组强制写为NONE。
+ *
+ * light传入&Light1时，只处理Light1上的禁用分组；
+ * light传入&Light2时，只处理Light2上的禁用分组。
+ */
+static void CtrlLightGroup_ForceOff(Light_t *light)
+{
+    for (uint8_t position = 0U;
+         position < CTRL_LIGHT_GROUP_NUM;
+         position++)
+    {
+        const CtrlLightGroupMap_t *map;
+
+        if (!CtrlLightGroup_IsForceOff(position))
+            continue;
+
+        map = &CtrlLightGroupMap[position];
+
+        /*
+         * 只处理本次指定的灯带。
+         * 0x00～0x06位于Light1，0x07位于Light2。
+         */
+        if (map->Light != light)
+            continue;
+
+        RGB_SetMoreColor(
+            map->Light,
+            map->Start,
+            map->End,
+            NONE,
+            0,
+            0
+        );
+    }
+}
 
 static CtrlLightGroupState_t CtrlLightGroupState[CTRL_LIGHT_GROUP_NUM];
 static uint8_t Light1RefreshPending = 0U;
@@ -128,6 +185,30 @@ bool CtrlLightGroup_Set(uint8_t position, uint8_t color, uint8_t mode)
         mode != CTRL_LIGHT_MODE_BLINK)
         return false;
 
+    /*
+     * 以下分组永久保持熄灭：
+     *
+     * 0x00：孙悟空升级
+     * 0x01：猪八戒升级
+     * 0x02：沙悟净升级
+     * 0x06：游戏说明
+     * 0x07：数码管按键
+     */
+    if (CtrlLightGroup_IsForceOff(position))
+    {
+        state = &CtrlLightGroupState[position];
+
+        /*
+        * 清除可能存在的旧状态，避免该分组继续闪烁
+        * 或在全局刷新后重新覆盖强制熄灭结果。
+        */
+        state->Enabled = 0U;
+        state->Dirty = 0U;
+        state->BlinkOn = 0U;
+        state->Mode = CTRL_LIGHT_MODE_OFF;
+
+        return true;
+    }
     state = &CtrlLightGroupState[position];
     state->Color = color;
     state->Mode = mode;
@@ -202,6 +283,16 @@ void Light_Init(void)
 
     RGB_SetMoreColor(&Light1, 0, Light1_RGBbuffer_SIZE - 1, NONE, 0, 0);
     RGB_SetMoreColor(&Light2, 0, Light2_RGBbuffer_SIZE - 1, NONE, 0, 0);
+
+    /*
+    * 上电初始化时明确保持禁用分组熄灭。
+    *
+    * Light1：0x00、0x01、0x02、0x06
+    * Light2：0x07
+    */
+    CtrlLightGroup_ForceOff(&Light1);
+    CtrlLightGroup_ForceOff(&Light2);
+
     RGB_Flush(&Light1);
     RGB_Flush(&Light2);
 }
@@ -320,12 +411,34 @@ void Light_Task(void)
 
     if (Light1RefreshPending != 0U)
     {
+        /*
+        * Light1最终输出保护：
+        *
+        * 0x00：Light1[18..25]
+        * 0x01：Light1[26..33]
+        * 0x02：Light1[34..41]
+        * 0x06：Light1[0..17]
+        *
+        * 无论全局场景或分组命令写入什么颜色，
+        * 在发送给WS2812前都强制清零。
+        */
+        CtrlLightGroup_ForceOff(&Light1);
+
         RGB_Flush(&Light1);
         Light1RefreshPending = 0U;
     }
 
     if (Light2RefreshPending != 0U)
     {
+        /*
+        * Light2最终输出保护：
+        *
+        * 0x07：Light2[8, 15]
+        *
+        * 保证数码管按键灯在全局场景中也不会亮。
+        */
+        CtrlLightGroup_ForceOff(&Light2);
+
         RGB_Flush(&Light2);
         Light2RefreshPending = 0U;
     }
