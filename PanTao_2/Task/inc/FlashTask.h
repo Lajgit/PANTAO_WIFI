@@ -3,7 +3,7 @@
 
 #include "port_flash.h"
 
-#define Setting_Addr 0x08008000
+#define Setting_Addr 0x080E0000
 
 typedef struct
 {
