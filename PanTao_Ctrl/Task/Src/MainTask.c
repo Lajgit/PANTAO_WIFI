@@ -16,6 +16,7 @@
 Scene_t Scene = SCENE_LESSLIGHT;
 Event_Handle_t Event;
 extern Tx_HandleTypeDef Tx;
+extern Rx_HandleTypeDef Rx;
 void System_Reset(void)
 {
     __disable_irq();
@@ -54,6 +55,8 @@ static void Encoder_Task(void)
 void Main_Init(void)
 {
     CommInit();
+    /* 测试版继续接收数据，但不执行主板指令，保持呼吸灯效和8888。 */
+    Rx.Deal = NULL;
     KeyAll_Init();
     Light_Init();
     DigitalTubeTask_Init();
@@ -67,6 +70,7 @@ void Main_Task(void)
     HAL_IWDG_Refresh(&hiwdg);
     Key_Task();
     HAL_IWDG_Refresh(&hiwdg);
+    /* 测试版运行上电默认场景0的九色呼吸灯效。 */
     Light_Task();
     HAL_IWDG_Refresh(&hiwdg);
     Mesg_Task();

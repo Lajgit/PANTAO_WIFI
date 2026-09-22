@@ -74,10 +74,9 @@ static uint32_t GlobalBreathLastTime = 0U;
 
 static void SetAllWs2812Color(RGB_t color, uint8_t relative_lightness)
 {
-    /* 游戏说明按键位于Light1开头，始终保持熄灭。 */
     RGB_SetMoreColor(
         &Light1,
-        CtrlLightGroupMap[0x06U].End + 1U,
+        0,
         Light1_RGBbuffer_SIZE - 1,
         color,
         LightBoard_Lightness,
@@ -132,10 +131,6 @@ bool CtrlLightGroup_Set(uint8_t position, uint8_t color, uint8_t mode)
         mode != CTRL_LIGHT_MODE_OFF &&
         mode != CTRL_LIGHT_MODE_BLINK)
         return false;
-
-    /* 游戏说明按键只接受熄灭状态，仍标记刷新以发送全黑数据。 */
-    if (position == 0x06U)
-        mode = CTRL_LIGHT_MODE_OFF;
 
     state = &CtrlLightGroupState[position];
     state->Color = color;
@@ -216,7 +211,7 @@ void Light_Init(void)
     RGB_Flush(&Light2);
 }
 
-/* 场景0：除游戏说明按键外，WS2812依次使用九种颜色进行呼吸亮灭。 */
+/* 场景0：全部WS2812依次使用九种颜色进行呼吸亮灭。 */
 static void LesslightSceneLight(void)
 {
     uint32_t now = HAL_GetTick();
@@ -257,7 +252,7 @@ static void LesslightSceneLight(void)
         BreathLight_SetLightKeep(BreathList[i], 0, LightBelt_Lightness, 255);
 }
 
-/* 场景1：除游戏说明按键外，WS2812常亮白色。 */
+/* 场景1：全部WS2812常亮白色。 */
 static void IdleSceneLight(void)
 {
     if (GlobalSceneForceRefresh != 0U)
@@ -270,7 +265,7 @@ static void IdleSceneLight(void)
         BreathLight_SetLightKeep(BreathList[i], 0, LightBelt_Lightness, 255);
 }
 
-/* 场景2：除游戏说明按键外，WS2812常亮红色。 */
+/* 场景2：全部WS2812常亮红色。 */
 static void PlayingSceneLight(void)
 {
     if (GlobalSceneForceRefresh != 0U)
@@ -332,16 +327,6 @@ void Light_Task(void)
     if (Light1RefreshPending != 0U &&
         HAL_TIM_GetChannelState(Light1.htim, Light1.Channel) == HAL_TIM_CHANNEL_STATE_READY)
     {
-        /* 最终输出前清零游戏说明按键，包含第一颗Light1[0]。 */
-        RGB_SetMoreColor(
-            &Light1,
-            CtrlLightGroupMap[0x06U].Start,
-            CtrlLightGroupMap[0x06U].End,
-            NONE,
-            0,
-            0
-        );
-
         RGB_Flush(&Light1);
         Light1RefreshPending = 0U;
     }
