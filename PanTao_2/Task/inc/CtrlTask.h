@@ -37,5 +37,9 @@ void Hoolle_Output(Motor_Hoolle *Motor, uint16_t num);
 void Card_Output(Motor_Card *Switch, uint16_t num);
 void Device_StopAllImmediately(void);
 void CtrlTask(void);
+/* 中文注释：场景、手动旋转、归零的统一舵机控制入口。 */
+void Servo_SceneChanged(void);
+void Servo_ManualTurn(uint8_t direction);
+void Servo_Reset(void);
 
 #endif
