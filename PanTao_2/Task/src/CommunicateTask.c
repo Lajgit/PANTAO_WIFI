@@ -213,6 +213,7 @@ static void USART1_Deal(void *Rx_mesg)
             case SceneChange:
                 Comm_SendMesg_FillData(&Tx3,Board_to_Ctrl,0x03, mesg->Data4,0x00);
                 Scene = mesg->Data4;
+                Servo_SceneChanged();
                 break;
             /// 清珠
             case OutputAllHoolle:
@@ -284,7 +285,7 @@ static void USART1_Deal(void *Rx_mesg)
                 break;
                 /// 舵机归零
             case r_ServoReset:
-                Servo.SetAngle(&Servo, 90);
+                Servo_Reset();
                 break;
             /// 球盘重启：数据全0为普通重启，Data1~4=PANT时进入串口升级Bootloader
             case BoardRestart:
@@ -334,17 +335,17 @@ static void USART3_Deal(void *Rx_mesg)
         case 0x03:
             if (mesg->ExpandCode == 0x00)
             {
-                Servo.DecreaseAngle(&Servo, 1);
+                Servo_ManualTurn(0U);
                 Comm_SendMesg_FillData(&Tx1, Board_to_Android, Encoder, 0x00, 0x01);
             }
             else if (mesg->ExpandCode == 0x01)
             {
-                Servo.IncreaseAngle(&Servo, 1);
+                Servo_ManualTurn(1U);
                 Comm_SendMesg_FillData(&Tx1, Board_to_Android, Encoder, 0x00, 0x00);
                 
             }
             else if (mesg->ExpandCode == 0x02)
-                Servo.SetAngle(&Servo, 90);
+                Servo_Reset();
             break;
         }
     }
