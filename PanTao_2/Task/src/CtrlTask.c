@@ -1,4 +1,5 @@
 #include "CtrlTask.h"
+#include "MainTask.h"
 #include "MesgTask.h"
 #include "KeyTask.h"
 #include "LightTask.h"
@@ -12,6 +13,18 @@ volatile Motor_Card Card;
 Switch_Valve Lock_Valve, Valve;
 servo_t Servo;
 
+#define SERVO_RELEASE_TIME_MS 200U
+#define SERVO_MANUAL_WAIT_MS 10000U
+#define SERVO_AUTO_INTERVAL_MS 100U
+
+/* 中文注释：等待安卓实际下发场景，避免默认游戏场景导致开机误动作。 */
+static uint8_t ServoSceneReady = 0U;
+static uint8_t ServoManualPending = 0U;
+static uint8_t ServoPwmRunning = 0U;
+static uint32_t ServoManualTick = 0U;
+static uint32_t ServoLastControlTick = 0U;
+extern Scene_t Scene;
+
 extern Event_Handle_t Mesg_event;
 extern Event_Handle_t Key_event;
 extern uint8_t KeyState[4];
@@ -21,6 +34,62 @@ static inline uint32_t Get_SysTime(void)
 {
     return HAL_GetTick();
 }
+/* 中文注释：所有有效角度动作使用同一PWM输出，空闲200ms后释放。 */
+static void Servo_StartPwm(void)
+{
+    if (ServoPwmRunning == 0U)
+    {
+        HAL_TIM_PWM_Start(Servo.htim, Servo.channel);
+        ServoPwmRunning = 1U;
+    }
+}
+
+static void Servo_ReleasePwm(void)
+{
+    if (ServoPwmRunning != 0U &&
+        (uint32_t)(Get_SysTime() - ServoLastControlTick) >= SERVO_RELEASE_TIME_MS)
+    {
+        HAL_TIM_PWM_Stop(Servo.htim, Servo.channel);
+        ServoPwmRunning = 0U;
+    }
+}
+
+/* 中文注释：只有收到安卓场景命令后，游戏场景才能启动自动摆动。 */
+void Servo_SceneChanged(void)
+{
+    ServoSceneReady = 1U;
+}
+
+/* 中文注释：限位时旋钮继续旋转也要刷新手动优先10秒计时。 */
+void Servo_ManualTurn(uint8_t direction)
+{
+    ServoManualTick = Get_SysTime();
+    ServoManualPending = 1U;
+    if (direction == 0U)
+    {
+        if (Servo.angle <= Servo.min_angle)
+            return;
+        Servo_StartPwm();
+        Servo.DecreaseAngle(&Servo, 1U);
+    }
+    else
+    {
+        if (Servo.angle >= Servo.max_angle)
+            return;
+        Servo_StartPwm();
+        Servo.IncreaseAngle(&Servo, 1U);
+    }
+    ServoLastControlTick = Get_SysTime();
+}
+
+/* 中文注释：安卓归零和编码器按下归零均在200ms后释放PWM。 */
+void Servo_Reset(void)
+{
+    Servo_StartPwm();
+    Servo.SetAngle(&Servo, 90U);
+    ServoLastControlTick = Get_SysTime();
+}
+
 static void Ctrl_HoolleMotor(Motor_Hoolle *Motor, uint16_t speed, uint8_t dir, uint32_t timeout, uint32_t reverse_time, uint8_t retry_times, void (*Timeout_callbcak)(void))
 {
     // 开机吐珠电机
@@ -190,6 +259,9 @@ void Device_Init(void)
     Device_Switch_Init(&Lock_Valve.Switch, Lock_Valve_GPIO_Port, Lock_Valve_Pin, GPIO_PIN_SET);
     Device_Switch_Init(&Valve.Switch, Valve_GPIO_Port, Valve_Pin, GPIO_PIN_SET);
     Device_Servo_Init(&Servo, &htim2, TIM_CHANNEL_1, 45, 135, 90);
+    /* 中文注释：初始化时舵机PWM已启用，默认角度也适用200ms释放。 */
+    ServoPwmRunning = 1U;
+    ServoLastControlTick = Get_SysTime();
 
     HAL_TIM_Base_Start(&htim7);
     Motor_Hoolle1.Hoolle_num = 0;
@@ -223,45 +295,58 @@ void Device_StopAllImmediately(void)
 
     if (Servo.htim != NULL)
         HAL_TIM_PWM_Stop(Servo.htim, Servo.channel);
+    ServoPwmRunning = 0U;
 }
 
 void Servo_AutoRun(servo_t *Servo, uint32_t time)
 {
-    static uint32_t Time = 0;
-    static uint8_t dir = 0;
-    static uint32_t time_now;
-    time_now = HAL_GetTick();
-    if (time_now - Time > time)
+    static uint32_t Time = 0U;
+    static uint8_t dir = 0U;
+    uint32_t time_now = Get_SysTime();
+
+    if ((uint32_t)(time_now - Time) >= time)
     {
-        if (dir == 0)
+        Time = time_now;
+        if (dir == 0U)
         {
             if (Servo->angle < Servo->max_angle)
-            {
-                Servo->angle += 1;
-                Servo->SetAngle(&Servo, Servo->angle);
-                Time = time_now;
-            }
+                Servo->angle++;
             else
-            {
-                dir = 1;
-                Time = time_now;
-            }
+                dir = 1U;
         }
-        if (dir == 1)
+        if (dir == 1U)
         {
             if (Servo->angle > Servo->min_angle)
-            {
-                Servo->angle -= 1;
-                Servo->SetAngle(&Servo, Servo->angle);
-                Time = time_now;
-            }
+                Servo->angle--;
             else
-            {
-                dir = 0;
-                Time = time_now;
-            }
+                dir = 0U;
         }
+
+        /* 中文注释：自动摆动沿用蟠桃原有1度步进和PWM控制。 */
+        Servo_StartPwm();
+        Servo->SetAngle(Servo, Servo->angle);
+        ServoLastControlTick = time_now;
     }
+}
+
+/* 中文注释：场景2、3、4自动摆动；玩家最后一次旋转后等待10秒。 */
+static void Servo_AutoTask(void)
+{
+    if (ServoSceneReady == 0U ||
+        ((uint8_t)Scene != 2U && (uint8_t)Scene != 3U && (uint8_t)Scene != 4U))
+    {
+        ServoManualPending = 0U;
+        return;
+    }
+
+    if (ServoManualPending != 0U)
+    {
+        if ((uint32_t)(Get_SysTime() - ServoManualTick) < SERVO_MANUAL_WAIT_MS)
+            return;
+        ServoManualPending = 0U;
+    }
+
+    Servo_AutoRun(&Servo, SERVO_AUTO_INTERVAL_MS);
 }
 void CtrlTask(void)
 {
@@ -273,5 +358,6 @@ void CtrlTask(void)
     Ctrl_Valve(&Valve, 2500, ValveTimeout_callback);
     Ctrl_Valve(&Lock_Valve, ValveTimeout_time, Nothing_callback);
 
-    // Servo_AutoRun(&Servo, 100);
+    Servo_AutoTask();
+    Servo_ReleasePwm();
 }
