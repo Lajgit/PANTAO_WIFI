@@ -15,7 +15,7 @@ servo_t Servo;
 
 #define SERVO_RELEASE_TIME_MS 200U
 #define SERVO_MANUAL_WAIT_MS 10000U
-#define SERVO_AUTO_INTERVAL_MS 100U
+#define SERVO_AUTO_INTERVAL_MS 75U
 
 /* 中文注释：等待安卓实际下发场景，避免默认游戏场景导致开机误动作。 */
 static uint8_t ServoSceneReady = 0U;
@@ -309,20 +309,28 @@ void Servo_AutoRun(servo_t *Servo, uint32_t time)
         Time = time_now;
         if (dir == 0U)
         {
-            if (Servo->angle < Servo->max_angle)
-                Servo->angle++;
-            else
+            /* 中文注释：每次增加2度，到达上限时钳位并反向。 */
+            if (Servo->angle + 2U >= Servo->max_angle)
+            {
+                Servo->angle = Servo->max_angle;
                 dir = 1U;
-        }
-        if (dir == 1U)
-        {
-            if (Servo->angle > Servo->min_angle)
-                Servo->angle--;
+            }
             else
+                Servo->angle += 2U;
+        }
+        else
+        {
+            /* 中文注释：每次减少2度，到达下限时钳位并反向。 */
+            if (Servo->angle <= Servo->min_angle + 2U)
+            {
+                Servo->angle = Servo->min_angle;
                 dir = 0U;
+            }
+            else
+                Servo->angle -= 2U;
         }
 
-        /* 中文注释：自动摆动沿用蟠桃原有1度步进和PWM控制。 */
+        /* 中文注释：自动摆动每75ms步进2度，并沿用原有PWM控制。 */
         Servo_StartPwm();
         Servo->SetAngle(Servo, Servo->angle);
         ServoLastControlTick = time_now;
