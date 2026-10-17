@@ -23,8 +23,8 @@ void DigitalTubeTask_Init(void)
     Init.spi_transmit = DigitalTube_SPItransmit;
     DigitalTube_Init(&DigitalTube, Init);
     HAL_GPIO_WritePin(SPI2_OE_GPIO_Port, SPI2_OE_Pin, GPIO_PIN_RESET);
-    /* 测试版：四位数码管固定显示8888。 */
-    DigitalTube.Set_Num(&DigitalTube, 0, 8888, 4);
+    /* 正常版：开机数码管默认显示0000，后续由串口指令更新。 */
+    DigitalTube.Set_Num(&DigitalTube, 0, 0, 4);
     DigitalTube.Refresh(&DigitalTube);
 }
 
