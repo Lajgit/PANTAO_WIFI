@@ -89,6 +89,6 @@ void KeyAll_Init(void)
 
 void Key_Task(void)
 {
-    Key_Scan(Button_List, 7);
-    Key_Scan(Keyboard_List, 4);
+    /* 只允许PA5/PA7/PA10（Button1～Button3，对应K8～K10）上报。 */
+    Key_Scan(Button_List, 3);
 }
