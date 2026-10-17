@@ -124,6 +124,11 @@ bool CtrlLightGroup_Set(uint8_t position, uint8_t color, uint8_t mode)
 {
     CtrlLightGroupState_t *state;
 
+    /* 仅允许三个发射模块和数码管模块接收灯光分组控制。 */
+    if (position != 0x03U && position != 0x04U &&
+        position != 0x05U && position != 0x07U)
+        return false;
+
     if (position >= CTRL_LIGHT_GROUP_NUM || color >= CTRL_LIGHT_COLOR_NUM)
         return false;
 
@@ -327,6 +332,8 @@ void Light_Task(void)
     if (Light1RefreshPending != 0U &&
         HAL_TIM_GetChannelState(Light1.htim, Light1.Channel) == HAL_TIM_CHANNEL_STATE_READY)
     {
+        /* DMA发送前强制熄灭升级及游戏说明灯，安卓指令无法重新点亮。 */
+        RGB_SetMoreColor(&Light1, 0, 41, NONE, 0, 0);
         RGB_Flush(&Light1);
         Light1RefreshPending = 0U;
     }
@@ -334,6 +341,8 @@ void Light_Task(void)
     if (Light2RefreshPending != 0U &&
         HAL_TIM_GetChannelState(Light2.htim, Light2.Channel) == HAL_TIM_CHANNEL_STATE_READY)
     {
+        /* 仅保留数码管模块Light2[8～15]，旋钮模块永久熄灭。 */
+        RGB_SetMoreColor(&Light2, 0, 7, NONE, 0, 0);
         RGB_Flush(&Light2);
         Light2RefreshPending = 0U;
     }
