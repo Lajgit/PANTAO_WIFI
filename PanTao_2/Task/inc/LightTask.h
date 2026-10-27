@@ -9,6 +9,8 @@
 #define Light_CRRbuffer_SIZE ((Light_RGBbuffer_SIZE + 7) * 24)
 
 void Light_Init(void);
+/* 中文注释：灯编号1～4对应四路光眼，开灯为绿色。 */
+void HoleLight_Set(uint8_t light_number, uint8_t enabled);
 void Light_Task(void);
 
 #endif

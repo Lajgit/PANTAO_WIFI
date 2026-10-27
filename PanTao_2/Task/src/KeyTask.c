@@ -33,7 +33,6 @@ extern Event_Handle_t Mesg_event;
 extern ListHandle_t ResendList, DealList;
 extern servo_t Servo;
 extern Scene_t Scene;
-extern Light_Handle_t *HoleLightList[4];
 extern Motor_Hoolle Motor_Hoolle1;
 extern Motor_Card Card;
 extern Tx_HandleTypeDef Tx1;
@@ -88,11 +87,7 @@ static void Hole_ShortCallback(uint16_t id)
 {
     if (id >= 4)
         return;
-    if (HoleLightList[id]->state == 0)
-    {
-        HoleLightList[id]->state = 1;
-        HoleLightList[id]->SetColor(HoleLightList[id], GREEN, 255);
-    }
+    /* 中文注释：光眼只记录状态并上报；四组孔洞RGB灯由安卓0x15指令控制。 */
     if (KeyState[id] == 0)
     {
         KeyState[id] = 1;
@@ -111,10 +106,6 @@ static void Hole_LongCallback(uint16_t id)
 
 static void Hole_ReleaseCallback(uint16_t id)
 {
-    // if (id >= 4)
-    //     return;
-    // HoleLightList[id]->state = 0;
-    // HoleLightList[id]->SetColor(HoleLightList[id], NONE, 0);
 }
 
 static void Hole_Init(void)

@@ -190,7 +190,7 @@ static void USART1_Deal(void *Rx_mesg)
             /// 球盘亮度
             case BoardLightness:
                 Setting.Board_Lightness = mesg->Data4;
-                SemaphoreGive(Light.Semaphore);
+                /* 中文注释：仅请求刷新亮度，不强制释放正在工作的RGB DMA信号量。 */
                 Light.Init = true;
                 break;
             /// 灯带亮度
@@ -198,6 +198,10 @@ static void USART1_Deal(void *Rx_mesg)
                 Setting.LightBelt_Lightness = mesg->Data4;
                 BreathLight_RefreshState(BreathList, 4);
                 Comm_SendMesg_FillData(&Tx3, Board_to_Ctrl, 0x02, mesg->Data4, 0x00); // 发送给控台板
+                break;
+            /// 主控孔洞灯光开关：Data4=1～4，ExpandCode=0关/1开
+            case LightControl:
+                HoleLight_Set(mesg->Data4, mesg->ExpandCode);
                 break;
             /// 控台亮度
             case CtrlLightness:

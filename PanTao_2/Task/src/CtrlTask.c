@@ -2,7 +2,6 @@
 #include "MainTask.h"
 #include "MesgTask.h"
 #include "KeyTask.h"
-#include "LightTask.h"
 #include "tim.h"
 #include "port_device.h"
 #include "port_event.h"
@@ -28,8 +27,6 @@ extern Scene_t Scene;
 extern Event_Handle_t Mesg_event;
 extern Event_Handle_t Key_event;
 extern uint8_t KeyState[4];
-extern Light_Handle_t *HoleLightList[4];
-extern Light_t Light;
 static inline uint32_t Get_SysTime(void)
 {
     return HAL_GetTick();
@@ -219,12 +216,8 @@ static void ValveTimeout_callback(void)
 {
     EventGroupClearBits(&Key_event, Event_AllHoleSwitchTrigger);
     Hoolle_Output(&Motor_Hoolle1, 0);
-    SemaphoreGive(Light.Semaphore);
+    /* 中文注释：四路完成后的状态复位不再操作孔洞RGB灯。 */
     memset(KeyState, 0, sizeof(KeyState));
-    Light.Init = true;
-    LightEffect_Unblock_SetColor(&Light, 0, Light.LED_NUM, NONE, 0, 0, false);
-    for (uint8_t j = 0; j < 4; j++)
-        HoleLightList[j]->state = 0;
 }
 
 static void Nothing_callback(void)

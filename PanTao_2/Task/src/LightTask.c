@@ -17,7 +17,6 @@ extern Setting_TypeDef Setting;
 extern uint8_t sm16306s_data[2];
 extern Scene_t Scene;
 extern Tx_HandleTypeDef Tx3;
-extern uint8_t KeyState[4];
 
 #define HOLE_BOOT_TEST_LIGHTNESS 5
 
@@ -76,10 +75,21 @@ void Light_Init(void)
     // HAL_Delay(10);
 }
 
+/* 中文注释：安卓0x15只设置四路目标开关状态，统一由灯光任务刷新RGB。 */
+static uint8_t HoleLightRefreshPending = 0U;
+
+void HoleLight_Set(uint8_t light_number, uint8_t enabled)
+{
+    if (light_number < 1U || light_number > 4U || enabled > 1U)
+        return;
+
+    HoleLightList[light_number - 1U]->state = enabled;
+    HoleLightRefreshPending = 1U;
+}
+
 /* 使用包含式end索引的灯光接口时，32颗灯的合法末尾索引为31 */
 static void SettingSceneLight(void)
 {
-    LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE - 1U, WHITE, Setting.Board_Lightness, 255, false);
     for (uint8_t i = 0; i < 6; i++)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
 }
@@ -118,18 +128,17 @@ static void PlayingSceneLight(void)
 {
     for (uint8_t i = 0; i < 6; i++)
         BreathLight_SetLightKeep(BreathList[i], 0, Setting.LightBelt_Lightness, 255);
-    LightEffect_Unblock_SetColor(&Light, 0, Light_RGBbuffer_SIZE - 1U, NONE, Setting.Board_Lightness, 0, false);
 }
 
-/* 切回游玩场景时，根据光眼已触发状态一次性恢复四组孔洞灯 */
-static bool RestorePlayingHoleLight(void)
+/* 中文注释：四组孔洞灯仅依据安卓指令状态统一刷新；DMA忙时保留请求等待下次任务。 */
+static bool RefreshHoleLight(void)
 {
     if (SemaphoreTake(Light.Semaphore) == false)
         return false;
 
     for (uint8_t i = 0; i < 4; i++)
     {
-        if (KeyState[i] != 0)
+        if (HoleLightList[i]->state != 0)
         {
             RGB_SetMoreColor(&Light,
                              HoleLightList[i]->start,
@@ -151,6 +160,7 @@ static bool RestorePlayingHoleLight(void)
 
     RGB_Flush(&Light);
     Light.Init = false;
+    HoleLightRefreshPending = 0U;
     return true;
 }
 
@@ -171,30 +181,14 @@ static void DefeatSceneLight(void)
 }
 void Light_Task(void)
 {
-    static Scene_t LastScene = SCENE_PLAYING;
-    static bool RestoreHoleLightPending = false;
-
-    if (Scene == SCENE_PLAYING && LastScene != SCENE_PLAYING)
-        RestoreHoleLightPending = true;
-    else if (Scene != SCENE_PLAYING)
-        RestoreHoleLightPending = false;
-
     if (Scene == SCENE_SETTING)
         SettingSceneLight();
     // else if (Scene == SCENE_IDLE)
     //     IdleSceneLight();
     else if (Scene == SCENE_PLAYING)
-    {
-        if (RestoreHoleLightPending == true)
-        {
-            if (RestorePlayingHoleLight() == true)
-                RestoreHoleLightPending = false;
-        }
-        else
-        {
-            PlayingSceneLight();
-        }
-    }
+        PlayingSceneLight();
 
-    LastScene = Scene;
+    /* 中文注释：安卓灯光命令及亮度变更触发刷新，光眼和电磁阀不再改变灯状态。 */
+    if (HoleLightRefreshPending != 0U || Light.Init == true)
+        RefreshHoleLight();
 }
