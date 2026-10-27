@@ -274,7 +274,7 @@ void Key_Task(void)
         if (i == 4)
         {
             Motor_Hoolle1.Motor.state = DEVICE_STATE_PAUSE;
-            Comm_SendMesg_FillData_withResend(&Tx1, Board_to_Android, LightEye, 0x00, 0xFF, &ResendList);
+            /* 中文注释：全中由安卓根据四路光眼上报判断，不再发送0xFF全中报文。 */
             ValveRestartTime = HAL_GetTick();
             EventGroupSetBits(&Key_event, Event_AllHoleSwitchTrigger);
         }
