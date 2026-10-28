@@ -11,11 +11,12 @@
 //V1.0.4.0 修改为光眼每次触发都上报安卓
 //V1.0.5.0 定制版，自动摆动
 //V1.0.6.0 修改球盘灯光控制归属，由安卓控制，球盘只负责执行
+//V1.0.7.0 自动摆动添加标志位SERVO_AUTO_SWING_ENABLE
 
 /* ========== 版本号分段定义，升级版本仅需修改此处数值 ========== */
 #define VERSION_MAJOR    1U    // 主版本号：重大架构迭代时递增
 #define VERSION_MINOR    0U    // 次版本号：功能新增时递增
-#define VERSION_PATCH    6U    // 修订版本号：Bug修复时递增
+#define VERSION_PATCH    7U    // 修订版本号：Bug修复时递增
 #define VERSION_BUILD    0U    // 构建版本号：编译序号/保留位，按需使用
 
 /* ========== 自动组合为32位无符号版本号（格式：0xMM NN PP BB） ==========
