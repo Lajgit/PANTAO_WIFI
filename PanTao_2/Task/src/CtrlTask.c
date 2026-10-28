@@ -14,6 +14,8 @@ servo_t Servo;
 
 #define SERVO_RELEASE_TIME_MS 200U
 #define SERVO_MANUAL_WAIT_MS 10000U
+/* 中文注释：自动摆动独立功能开关，0关闭、1开启；不与版本号绑定。 */
+#define SERVO_AUTO_SWING_ENABLE 0U
 #define SERVO_AUTO_INTERVAL_MS 75U
 
 /* 中文注释：等待安卓实际下发场景，避免默认游戏场景导致开机误动作。 */
@@ -359,6 +361,8 @@ void CtrlTask(void)
     Ctrl_Valve(&Valve, 2500, ValveTimeout_callback);
     Ctrl_Valve(&Lock_Valve, ValveTimeout_time, Nothing_callback);
 
-    Servo_AutoTask();
+    /* 中文注释：当前正式版关闭自动摆动，后续定制版本可通过开关启用。 */
+    if (SERVO_AUTO_SWING_ENABLE != 0U)
+        Servo_AutoTask();
     Servo_ReleasePwm();
 }
