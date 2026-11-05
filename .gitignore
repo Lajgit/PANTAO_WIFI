@@ -1,0 +1,39 @@
+# Keil/EIDE编译输出；仅忽略实际生成目录，保留测试固件、源码和工程配置。
+/PanTao_2/MDK-ARM/PanTao_2/
+/PanTao_2/MDK-ARM/build/
+/PanTao_2/MDK-ARM/bin/
+/PanTao_2/MDK-ARM/obj/
+/PanTao_2/MDK-ARM/out/
+/PanTao_2/MDK-ARM/Objects/
+/PanTao_2/MDK-ARM/Listings/
+/PanTao_Ctrl/MDK-ARM/PanTao_Ctrl/
+/PanTao_Ctrl/MDK-ARM/build/
+/PanTao_Ctrl/MDK-ARM/bin/
+/PanTao_Ctrl/MDK-ARM/obj/
+/PanTao_Ctrl/MDK-ARM/out/
+/PanTao_Ctrl/MDK-ARM/Objects/
+/PanTao_Ctrl/MDK-ARM/Listings/
+
+# Keil用户窗口布局、启动列表、日志和验证时生成的临时工程。
+/PanTao_2/MDK-ARM/*.uvguix
+/PanTao_2/MDK-ARM/*.uvguix.*
+/PanTao_2/MDK-ARM/startup_*.lst
+/PanTao_2/MDK-ARM/*_verify.uvprojx
+/PanTao_2/MDK-ARM/.vscode/*.log
+/PanTao_2/MDK-ARM/.vscode/*.log.lock
+/PanTao_Ctrl/MDK-ARM/*.uvguix
+/PanTao_Ctrl/MDK-ARM/*.uvguix.*
+/PanTao_Ctrl/MDK-ARM/startup_*.lst
+/PanTao_Ctrl/MDK-ARM/*_verify.uvprojx
+/PanTao_Ctrl/MDK-ARM/.vscode/*.log
+/PanTao_Ctrl/MDK-ARM/.vscode/*.log.lock
+
+# EIDE运行日志及本机上下文不入库。
+/PanTao_2/MDK-ARM/.eide/log/
+/PanTao_2/MDK-ARM/.eide.usr.ctx.json
+/PanTao_Ctrl/MDK-ARM/.eide/log/
+/PanTao_Ctrl/MDK-ARM/.eide.usr.ctx.json
+
+# 根层空RTE组件头由Keil生成；保留各目标目录内的RTE配置。
+/PanTao_2/MDK-ARM/RTE/RTE_Components.h
+/PanTao_Ctrl/MDK-ARM/RTE/RTE_Components.h
